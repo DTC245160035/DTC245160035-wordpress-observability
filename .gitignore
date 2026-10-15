@@ -24,3 +24,4 @@ loki-data/
 *.tmp
 
 nginx/certs/
+compose.before-loki.yaml

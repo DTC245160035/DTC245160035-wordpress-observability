@@ -530,3 +530,101 @@ curl -s 'http://127.0.0.1:9090/api/v1/query?query=up'
 ```
 
 Các target `prometheus`, `cadvisor`, `nginx` và `mysql` phải có giá trị `1`, nghĩa là đang hoạt động bình thường.
+
+## Hệ thống log tập trung Loki và Promtail
+
+Hệ thống sử dụng Loki để lưu trữ và truy vấn log tập trung. Promtail thu thập log từ các Docker container và gửi tới Loki.
+
+### Các thành phần
+
+| Thành phần | Chức năng | Cổng nội bộ |
+|---|---|---:|
+| Loki | Lưu trữ và truy vấn log | 3100 |
+| Promtail | Thu thập log Docker và gửi tới Loki | 9080 |
+| Grafana | Truy vấn và hiển thị log từ Loki | 3000 |
+
+Promtail đọc thông tin container thông qua Docker socket ở chế độ chỉ đọc:
+
+```text
+/var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+Các nhãn được gắn vào mỗi luồng log:
+
+- `project`: tên Docker Compose project.
+- `service`: tên service trong `compose.yaml`.
+- `container`: tên Docker container.
+
+Promtail chỉ thu thập log của project:
+
+```text
+dtc245160035-wordpress
+```
+
+Log cũ hơn 7 ngày được loại bỏ trước khi gửi tới Loki. Loki lưu dữ liệu trong volume `dtc245160035-loki-data` và được cấu hình thời gian lưu là 168 giờ.
+
+### Truy cập log trong Grafana
+
+Tạo SSH tunnel từ máy Mac:
+
+```bash
+ssh -N \
+  -o ExitOnForwardFailure=yes \
+  -L 13000:127.0.0.1:3000 \
+  hnqv3526@172.172.15.82
+```
+
+Truy cập Grafana:
+
+```text
+http://127.0.0.1:13000
+```
+
+Chọn `Explore`, sau đó chọn datasource `Loki`.
+
+### Các truy vấn LogQL
+
+Hiển thị toàn bộ log của dự án:
+
+```logql
+{project="dtc245160035-wordpress"}
+```
+
+Hiển thị log của riêng dịch vụ Nginx:
+
+```logql
+{project="dtc245160035-wordpress", service="nginx"}
+```
+
+Lọc các dòng log chứa lỗi hoặc cảnh báo:
+
+```logql
+{project="dtc245160035-wordpress"} |~ "(?i)(error|warn)"
+```
+
+### Kiểm tra Loki và Promtail
+
+Kiểm tra trạng thái container:
+
+```bash
+sudo docker compose ps
+```
+
+Kiểm tra trạng thái sẵn sàng của Loki:
+
+```bash
+sudo docker exec dtc245160035-grafana \
+  curl -fsS http://loki:3100/ready
+```
+
+Kết quả đúng:
+
+```text
+ready
+```
+
+Kiểm tra log Promtail:
+
+```bash
+sudo docker compose logs --tail=50 promtail
+```
