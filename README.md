@@ -441,3 +441,92 @@ git check-ignore -v .env
 - [ ] Loki và Promtail.
 - [ ] Truy vấn log bằng LogQL.
 - [ ] Hoàn thiện hardening và báo cáo.
+
+## Hệ thống giám sát Prometheus và Grafana
+
+Hệ thống sử dụng Prometheus để thu thập metrics và Grafana để trực quan hóa dữ liệu.
+
+### Các thành phần giám sát
+
+| Thành phần | Chức năng | Cổng nội bộ |
+|---|---|---:|
+| Prometheus | Thu thập và lưu trữ metrics | 9090 |
+| Grafana | Hiển thị dashboard giám sát | 3000 |
+| cAdvisor | Thu thập metrics của container | 8080 |
+| Nginx Exporter | Xuất metrics của Nginx | 9113 |
+| MySQL Exporter | Xuất metrics của MySQL | 9104 |
+
+Prometheus thu thập dữ liệu từ bốn job:
+
+- `prometheus`: giám sát chính Prometheus.
+- `cadvisor`: giám sát tài nguyên và hoạt động của container.
+- `nginx`: giám sát số kết nối và trạng thái Nginx.
+- `mysql`: giám sát trạng thái và kết nối MySQL.
+
+### Truy cập giao diện giám sát
+
+Prometheus và Grafana chỉ được ánh xạ vào địa chỉ `127.0.0.1` của máy ảo. Từ máy Mac, tạo SSH tunnel:
+
+```bash
+ssh -N \
+  -o ExitOnForwardFailure=yes \
+  -L 13000:127.0.0.1:3000 \
+  -L 19090:127.0.0.1:9090 \
+  hnqv3526@172.172.15.82
+
+```
+
+Sau đó truy cập:
+
+- Prometheus: `http://127.0.0.1:19090`
+- Prometheus Targets: `http://127.0.0.1:19090/targets`
+- Grafana: `http://127.0.0.1:13000`
+
+Tài khoản Grafana được cấu hình bằng các biến môi trường:
+
+```text
+GRAFANA_ADMIN_USER
+GRAFANA_ADMIN_PASSWORD
+```
+
+Giá trị thật được lưu trong file `.env` và không được đưa lên GitHub.
+
+### Dashboard Grafana
+
+Dashboard `DTC245160035 - System Monitoring` gồm các panel:
+
+1. Trạng thái các target Prometheus.
+2. Mức sử dụng CPU của các container.
+3. Số kết nối Nginx đang hoạt động.
+4. Số kết nối MySQL đang hoạt động.
+
+Các truy vấn PromQL chính:
+
+```promql
+up
+```
+
+```promql
+sum by (container_label_com_docker_compose_service) (
+  rate(container_cpu_usage_seconds_total{
+    container_label_com_docker_compose_service!=""
+  }[5m])
+) * 100
+```
+
+```promql
+nginx_connections_active
+```
+
+```promql
+mysql_global_status_threads_connected
+```
+
+### Kiểm tra hệ thống giám sát
+
+```bash
+sudo docker compose ps
+curl -s 'http://127.0.0.1:9090/api/v1/query?query=up'
+```
+
+Các target `prometheus`, `cadvisor`, `nginx` và `mysql` phải có giá trị `1`, nghĩa là đang hoạt động bình thường.
