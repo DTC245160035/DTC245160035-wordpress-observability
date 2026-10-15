@@ -1,0 +1,24 @@
+# Secret environment variables
+.env
+.env.local
+
+# Generated TLS certificates and private keys
+nginx/certs/*
+!nginx/certs/.gitkeep
+
+# Runtime data
+data/
+mysql-data/
+wordpress-data/
+grafana-data/
+prometheus-data/
+loki-data/
+
+# Editor and operating-system files
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+*.log
+*.tmp
