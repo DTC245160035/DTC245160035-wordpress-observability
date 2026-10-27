@@ -4,7 +4,7 @@ Hệ thống website quảng bá sản phẩm sử dụng WordPress, MySQL, phpM
 
 ## 1. Thông tin sinh viên
 
-- Họ và tên: Hoàng Việt
+- Họ và tên: Hoàng Ninh Quốc Việt
 - Mã sinh viên: DTC245160035
 - Chủ đề: Website quảng bá sản phẩm sử dụng WordPress
 - Nền tảng: Máy ảo Ubuntu Linux
